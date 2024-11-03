@@ -3,6 +3,7 @@ import datetime
 from django.contrib.auth.models import User as AuthUser
 from django.dispatch import receiver
 from django.db.models.signals import post_save
+from ckeditor.fields import RichTextField
 
 class UserProfile(models.Model):  # Extended User model
     user = models.OneToOneField(AuthUser, on_delete=models.CASCADE)
@@ -43,7 +44,7 @@ class Product(models.Model):
     product_price = models.DecimalField(null=False, decimal_places=2, max_digits=8)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, default=1)
     discount = models.BigIntegerField(default=0)
-    product_description = models.TextField(default="No description available")
+    product_description = RichTextField(default="No description available")
     img = models.ImageField(upload_to='uploads/product/')
     seller = models.ForeignKey(Seller, on_delete=models.CASCADE, related_name="products")
 

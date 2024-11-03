@@ -1,7 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Product, Cart, CartProducts, Seller, Category
+from .models import Product, Cart, CartProducts, Seller, Category, Order, OrdersProducts, UserOrders, UserProfile, UserAddresses, Address
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 from .forms import CustomUserCreationForm, ProductForm
 
 def home(request):
@@ -61,11 +63,13 @@ def cart_page(request):
 
 def register(request):
     if request.method == 'POST':
-        #print('hello')
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect('login')  
+            user = form.save()  # This will save the user and associated profile and address
+            login(request, user)  
+            return redirect('home') 
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = CustomUserCreationForm()
     
@@ -113,5 +117,49 @@ def edit_product(request, product_id):
 
     return render(request, 'edit_product.html', {'form': form, 'product': product, 'categories': categories})
 
+#@login_required
+def checkout(request):
+    # Retrieve user's cart
+    cart = Cart.objects.get(user=request.user)
+    cart_products = CartProducts.objects.filter(cart=cart)
 
+    # Calculate total order amount
+    order_total = sum(item.quantity * item.product.product_price for item in cart_products)
+
+    # Create a new order
+    order = Order.objects.create(order_total=order_total, date=timezone.now(), status=False)
+
+    # Link products from the cart to the order and clear the cart
+    for item in cart_products:
+        OrdersProducts.objects.create(order=order, product=item.product, quantity=item.quantity)
+    
+    # Clear the cart
+    cart_products.delete()
+
+    return redirect('order_summary', order_id=order.id)
+
+def order_summary(request, order_id):
+    # Get the order for the current user using UserOrders
+    order = get_object_or_404(Order, id=order_id)
+    
+    # Check if the order is associated with the current user
+    #user_order = get_object_or_404(UserOrders, user=request.user, order=order)
+    
+    # Retrieve the ordered products
+    order_products = OrdersProducts.objects.filter(order=order)
+
+    return render(request, 'order_summary.html', {
+        'order': order,
+        'order_products': order_products,
+    })
+
+@login_required  # Ensure that only logged-in users can access this page
+def profile(request):
+    user_profile = UserProfile.objects.get(user=request.user)  
+    addresses = UserAddresses.objects.filter(user=request.user)
+    return render(request, 'profile.html', {
+        'user': request.user,
+        'user_profile': user_profile,
+        'addresses': addresses,
+    })
 

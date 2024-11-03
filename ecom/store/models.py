@@ -1,17 +1,25 @@
 from django.db import models
 import datetime
 from django.contrib.auth.models import User as AuthUser
+from django.dispatch import receiver
+from django.db.models.signals import post_save
 
-class User(models.Model):
-    first_name = models.CharField(max_length=50, null=False)
-    last_name = models.CharField(max_length=50, null=False)
-    email_id = models.EmailField(max_length=100, null=False, unique=True)
-    password = models.CharField(max_length=255, null=False)
-    mobile = models.BigIntegerField(null=False, unique=True)
-    isplusmember = models.BooleanField(default=False)
+class UserProfile(models.Model):  # Extended User model
+    user = models.OneToOneField(AuthUser, on_delete=models.CASCADE)
+    mobile = models.CharField(max_length=10,default = '9999999999', unique=True)
+    is_plus_member = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'{self.first_name} {self.last_name}'
+        return f'{self.user.first_name} {self.user.last_name}'
+
+# @receiver(post_save, sender=AuthUser)
+# def create_user_profile(sender, instance, created, **kwargs):
+#     if created:
+#         UserProfile.objects.create(user=instance)
+
+# @receiver(post_save, sender=AuthUser)
+# def save_user_profile(sender, instance, **kwargs):
+#     instance.userprofile.save()
 
 class Cart(models.Model):
     user = models.OneToOneField(AuthUser, on_delete=models.CASCADE)
@@ -53,7 +61,7 @@ class Order(models.Model):
     status = models.BooleanField(default=False)
 
 class UserOrders(models.Model):  # Renamed for consistency
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(AuthUser, on_delete=models.CASCADE)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
 
 class OrdersProducts(models.Model):
@@ -62,7 +70,7 @@ class OrdersProducts(models.Model):
     quantity = models.BigIntegerField(default=1)
 
 class Address(models.Model):
-    house_no = models.BigIntegerField(null=False)
+    house_no = models.CharField(max_length=15,null=False)
     street_name = models.CharField(max_length=255, default="Unknown")
     address_lines = models.TextField(null=False)
     city = models.CharField(max_length=255, null=False)
@@ -70,7 +78,7 @@ class Address(models.Model):
     pincode = models.BigIntegerField(null=False)
 
 class UserAddresses(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(AuthUser, on_delete=models.CASCADE)
     address = models.ForeignKey(Address, on_delete=models.CASCADE)
     is_default = models.BooleanField(default=False)
 
